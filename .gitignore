@@ -1,0 +1,4 @@
+# Keep private per-user API credentials out of Git.
+scripts/api_keys.local.json
+__pycache__/
+*.py[cod]
