@@ -61,7 +61,9 @@ description: >-
 4. **完整**读一遍全文正文——不抽样、不跳过任何章节。
 5. 解析 `.bib` 全部条目（或 Word 参考文献列表全部条目），得到条目清单：
    `{key/编号, title, author, year, journal/booktitle, publisher, volume,
-   issue, pages, doi}`。解析细节见
+   issue, pages, doi, version/status, date/eprint/urldate}`；区分发表日期与访问日期。
+   同时记录用户或目标期刊的年份口径；未指定时按所引版本和出版社推荐引文判断。
+   解析细节见
    [reference.md § LaTeX/.bib 解析细节](reference.md#latexbib-解析细节)
    和 [reference.md § Word 解析细节](reference.md#word-解析细节)。
 6. 识别正文引用命令风格（`\cite`/`\citep`/`\citet`、数字式 `[12]`、作者
@@ -90,6 +92,7 @@ description: >-
 ```bash
 python scripts/search_paper.py --doi <doi>              # 条目有 DOI 时优先
 python scripts/search_paper.py "<标题>" --limit 5         # 无 DOI 或查不到时
+python scripts/search_paper.py --doi <doi> --publication-dates --json  # 年份差异/在线优先/卷期跨年时
 ```
 
 **脚本调用逐条串行，不批量、不并发**（原因见
@@ -103,7 +106,10 @@ python scripts/search_paper.py "<标题>" --limit 5         # 无 DOI 或查不�
    页码）。标题含 LaTeX 数学符号/特殊字符时先清理成纯文本再检索，见
    [reference.md § 检索词处理](reference.md#检索词处理)。
 2. 按 [reference.md § 字段比对规则](reference.md#字段比对规则) 逐项
-   判断：标题/作者/年份等**关键字段**不一致才判"不通过"；期刊全称
+   判断：年份必须先按 [出版日期与年份口径](reference.md#出版日期与年份口径)
+   确认所引版本、在线日期和卷期日期；不能把 API 的单个 `year` 当作唯一正确年份。
+   确认同一版本及口径后，关键字段确有错误才判“不通过”；日期口径待核单列，
+   不计入错误数。期刊全称
    缩写、出版社等**次要字段**差异仍判"通过"，记录到备注列，不进不通过表。
 3. **WebSearch 独立确认（可批量并行，固定 5 条/批）**：不依赖脚本检索词
    本身的假设，单独搜索该文献确认其真实存在、信息相符——专门用来抓
@@ -115,8 +121,8 @@ python scripts/search_paper.py "<标题>" --limit 5         # 无 DOI 或查不�
    完整分层策略和查询词简化规则见
    [reference.md § 真实性核查的双重验证](reference.md#真实性核查的双重验证)。
 4. **两项（脚本字段比对 + WebSearch 独立确认）必须都通过**才算这条通过；
-   任一项不通过，记录具体是哪个字段不一致（`.bib` 中的值 vs 核实到的值），
-   或"文献不存在/查到的其实是另一篇"。
+   证据确认不一致时，记录原值、核实值及来源。无法取得证据或无法确定日期口径时
+   判“待核”，不因未命中或数据库年份差异直接判错。
 5. 两个 API 都限流或都无结果时的处理见
    [reference.md § 限流处理](reference.md#限流处理)——不要因为一次
    临时限流就直接判定"不通过"，按退避策略重试后仍无结果才记录为
@@ -152,9 +158,11 @@ python scripts/search_paper.py "<标题>" --limit 5         # 无 DOI 或查不�
 完整模板见 [reference.md § 最终报告模板](reference.md#最终报告模板)，
 报告须包含：
 
-- 总体统计摘要（两个维度各自的总数/通过数/不通过或有疑问数）。
+- 总体统计摘要（真实性分别统计通过/不通过/待核；日期口径待核不计入错误数）。
 - 维度一：通过表（带"字段差异备注"列）+ 不通过表（带"不一致字段/`.bib`
   值/核实到的正确值/核查方式"列）。
+- 日期核对表：原年份、在线日期、卷期出版日期、所引版本/采用口径、建议年份、
+  证据链接和核验日期；无充分依据时建议年份填“待核”，不输出确定的改年建议。
 - 维度二：匹配通过表 + 有疑问表（带"疑点类型"列）。
 - 结论与建议：明确告知用户本报告未对论文原文或 `.bib` 文件做任何修改，
   后续是否修改由用户自行决定。

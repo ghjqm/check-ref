@@ -16,6 +16,16 @@ Ask the agent to audit an existing `.docx`, or a LaTeX `.tex` file together with
 
 ## Important scope
 
+Publication years are checked against the cited version and the target journal's requirements. Online-first and issue publication dates may differ. The skill keeps both dates, records the chosen basis and source, and leaves unresolved date conflicts pending rather than reporting a definite error.
+
+For a verified DOI, retrieve separate Crossref date fields with:
+
+```text
+python scripts/search_paper.py --doi <doi> --publication-dates --json
+```
+
+This adds date evidence without automatically choosing a citation year. Publisher citation guidance remains necessary when the applicable date basis is unclear.
+
 - Bibliography verification and claim-support review are separate checks.
 - Claim support is assessed from available abstracts; it is not a full-text, page-number, table, or figure audit.
 - Missing metadata or abstracts should remain unverified rather than being treated as proof that a citation is false.
